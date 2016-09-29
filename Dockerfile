@@ -82,8 +82,8 @@ mkdir -p /usr/local/nginx/temp/ && \
 rm -rf ../{ngx*,nginx*}
 
 # Copy our nginx config
-RUN rm -Rf /etc/nginx/nginx.conf
-ADD nginx.conf /etc/nginx/nginx.conf
+RUN rm -Rf /usr/local/nginx/conf/nginx.conf
+ADD nginx.conf /usr/local/nginx/conf/nginx.conf
 
 VOLUME /usr/local/nginx/html/
 
