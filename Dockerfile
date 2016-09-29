@@ -81,5 +81,13 @@ mkdir -p /usr/local/nginx/cache/ && \
 mkdir -p /usr/local/nginx/temp/ && \
 rm -rf ../{ngx*,nginx*}
 
+# Copy our nginx config
+RUN rm -Rf /etc/nginx/nginx.conf
+ADD conf/nginx.conf /etc/nginx/nginx.conf
+#nginx proxy conf
+ADD conf/runda-proxy.conf /etc/nginx/sites-enabled/runda-proxy.conf
+
+VOLUME /var/www/
+
 #启动nginx，保留一个前台进程，以免被docker强制退出
 CMD ./usr/local/nginx/sbin/nginx && tail -f /usr/local/nginx/logs/error.log
