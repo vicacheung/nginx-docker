@@ -1,3 +1,4 @@
+#http://amao12580.github.io/post/2016/04/Nginx-with-docker-part-one/
 #定义基础镜像
 FROM alpine:latest
 
