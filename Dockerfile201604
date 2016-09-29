@@ -1,9 +1,8 @@
-#http://amao12580.github.io/post/2016/04/Nginx-with-docker-part-one/
 #定义基础镜像
 FROM alpine:latest
 
 #定义nginx版本
-ENV NGINX_VERSION 1.11.4
+ENV NGINX_VERSION 1.9.14
 
 #将安装源切换为国内环境(中国科学技术大学)，大大加快了安装速度，同时稳定性也有了保障
 ENV MIRROR_URL http://mirrors.ustc.edu.cn/alpine/
@@ -14,8 +13,8 @@ ENV MIRROR_URL_SLOWEST http://dl-cdn.alpinelinux.org/alpine/
 
 #准备安装环境
 RUN echo '' > /etc/apk/repositories && \
-    echo "${MIRROR_URL}v3.4//main"     >> /etc/apk/repositories && \
-    echo "${MIRROR_URL}v3.4//community" >> /etc/apk/repositories && \
+    echo "${MIRROR_URL}v3.3//main"     >> /etc/apk/repositories && \
+    echo "${MIRROR_URL}v3.3//community" >> /etc/apk/repositories && \
     echo '185.31.17.249 github.com' >> /etc/hosts && \
     echo '202.141.160.110 mirrors.ustc.edu.cn' >> /etc/hosts && \
     echo '206.251.255.63 nginx.org' >> /etc/hosts
@@ -46,8 +45,8 @@ RUN tar -xzvf nginx-${NGINX_VERSION}.tar.gz && \
 cd nginx-${NGINX_VERSION} && \
 cd src/ && \
 #打补丁
-#patch -p1 < /nginx_upstream_check_module/check_1.9.2+.patch && \
-#cd .. && \
+patch -p1 < /nginx_upstream_check_module/check_1.9.2+.patch && \
+cd .. && \
 #去除nginx的对外版本号
 sed -i -e 's/${NGINX_VERSION}//g' -e 's/nginx\//ERROR/g' -e 's/"NGINX"/"ERROR"/g' src/core/nginx.h  && \
 ./configure --prefix=/usr/local/nginx \
@@ -81,14 +80,6 @@ make -j $(awk '/processor/{i++}END{print i}' /proc/cpuinfo) && make install && \
 mkdir -p /usr/local/nginx/cache/ && \
 mkdir -p /usr/local/nginx/temp/ && \
 rm -rf ../{ngx*,nginx*}
-
-# Copy our nginx config
-RUN rm -Rf /etc/nginx/nginx.conf
-ADD conf/nginx.conf /etc/nginx/nginx.conf
-#nginx proxy conf
-ADD conf/runda-proxy.conf /etc/nginx/sites-enabled/runda-proxy.conf
-
-VOLUME /var/www/
 
 #启动nginx，保留一个前台进程，以免被docker强制退出
 CMD ./usr/local/nginx/sbin/nginx && tail -f /usr/local/nginx/logs/error.log
