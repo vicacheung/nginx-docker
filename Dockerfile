@@ -89,7 +89,6 @@ ADD conf/runda-proxy.conf /etc/nginx/sites-enabled/runda-proxy.conf
 # nginx site conf
 RUN mkdir -p /etc/nginx/sites-available/ && \
 mkdir -p /etc/nginx/sites-enabled/ && \
-RUN ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
 
 VOLUME /usr/local/nginx/html/
 
