@@ -83,12 +83,7 @@ rm -rf ../{ngx*,nginx*}
 
 # Copy our nginx config
 RUN rm -Rf /etc/nginx/nginx.conf
-ADD conf/nginx.conf /etc/nginx/nginx.conf
-#nginx proxy conf
-ADD conf/runda-proxy.conf /etc/nginx/sites-enabled/runda-proxy.conf
-# nginx site conf
-RUN mkdir -p /etc/nginx/sites-available/ && \
-mkdir -p /etc/nginx/sites-enabled/
+ADD nginx.conf /etc/nginx/nginx.conf
 
 VOLUME /usr/local/nginx/html/
 
