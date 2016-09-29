@@ -81,10 +81,6 @@ mkdir -p /usr/local/nginx/cache/ && \
 mkdir -p /usr/local/nginx/temp/ && \
 rm -rf ../{ngx*,nginx*}
 
-# 初始化默认站点目录
-ADD src/ /var/www/html/
-ADD errors/ /var/www/errors/
-
 VOLUME /var/www/
 
 #启动nginx，保留一个前台进程，以免被docker强制退出
