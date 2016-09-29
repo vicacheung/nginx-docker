@@ -89,12 +89,9 @@ ADD conf/runda-proxy.conf /etc/nginx/sites-enabled/runda-proxy.conf
 # nginx site conf
 RUN mkdir -p /etc/nginx/sites-available/ && \
 mkdir -p /etc/nginx/sites-enabled/ && \
-mkdir -p /etc/nginx/ssl/ && \
-rm -Rf /var/www/* && \
-mkdir /var/www/html/
 RUN ln -s /etc/nginx/sites-available/default.conf /etc/nginx/sites-enabled/default.conf
 
-VOLUME /var/www/
+VOLUME /usr/local/nginx/html/
 
 #启动nginx，保留一个前台进程，以免被docker强制退出
 CMD ./usr/local/nginx/sbin/nginx && tail -f /usr/local/nginx/logs/error.log
