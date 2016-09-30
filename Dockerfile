@@ -1,130 +1,93 @@
-FROM alpine:3.4
+#定义基础镜像
+FROM alpine:latest
 
-MAINTAINER NGINX Docker Maintainers "docker-maint@nginx.com"
+#定义nginx版本
+ENV NGINX_VERSION 1.9.14
 
-ENV NGINX_VERSION 1.10.1
+#将安装源切换为国内环境(中国科学技术大学)，大大加快了安装速度，同时稳定性也有了保障
+ENV MIRROR_URL http://mirrors.ustc.edu.cn/alpine/
 
-RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
-	&& CONFIG="\
-		--prefix=/etc/nginx \
-		--sbin-path=/usr/sbin/nginx \
-		--modules-path=/usr/lib/nginx/modules \
-		--conf-path=/etc/nginx/nginx.conf \
-		--error-log-path=/var/log/nginx/error.log \
-		--http-log-path=/var/log/nginx/access.log \
-		--pid-path=/var/run/nginx.pid \
-		--lock-path=/var/run/nginx.lock \
-		--http-client-body-temp-path=/var/cache/nginx/client_temp \
-		--http-proxy-temp-path=/var/cache/nginx/proxy_temp \
-		--http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp \
-		--http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp \
-		--http-scgi-temp-path=/var/cache/nginx/scgi_temp \
-		--user=nginx \
-		--group=nginx \
-		--with-http_ssl_module \
-		--with-http_realip_module \
-		--with-http_addition_module \
-		--with-http_sub_module \
-		--with-http_dav_module \
-		--with-http_flv_module \
-		--with-http_mp4_module \
-		--with-http_gunzip_module \
-		--with-http_gzip_static_module \
-		--with-http_random_index_module \
-		--with-http_secure_link_module \
-		--with-http_stub_status_module \
-		--with-http_auth_request_module \
-		--with-http_xslt_module=dynamic \
-		--with-http_image_filter_module=dynamic \
-		--with-http_geoip_module=dynamic \
-		--with-http_perl_module=dynamic \
-		--with-threads \
-		--with-stream \
-		--with-stream_ssl_module \
-		--with-http_slice_module \
-		--with-mail \
-		--with-mail_ssl_module \
-		--with-file-aio \
-		--with-http_v2_module \
-		--with-ipv6 \
-	" \
-	&& addgroup -S nginx \
-	&& adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \
-	&& apk add --no-cache --virtual .build-deps \
-		gcc \
-		libc-dev \
-		make \
-		openssl-dev \
-		pcre-dev \
-		zlib-dev \
-		linux-headers \
-		curl \
-		gnupg \
-		libxslt-dev \
-		gd-dev \
-		geoip-dev \
-		perl-dev \
-	&& curl -fSL http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz -o nginx.tar.gz \
-	&& curl -fSL http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz.asc  -o nginx.tar.gz.asc \
-	&& export GNUPGHOME="$(mktemp -d)" \
-	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$GPG_KEYS" \
-	&& gpg --batch --verify nginx.tar.gz.asc nginx.tar.gz \
-	&& rm -r "$GNUPGHOME" nginx.tar.gz.asc \
-	&& mkdir -p /usr/src \
-	&& tar -zxC /usr/src -f nginx.tar.gz \
-	&& rm nginx.tar.gz \
-	&& cd /usr/src/nginx-$NGINX_VERSION \
-	&& ./configure $CONFIG --with-debug \
-	&& make -j$(getconf _NPROCESSORS_ONLN) \
-	&& mv objs/nginx objs/nginx-debug \
-	&& mv objs/ngx_http_xslt_filter_module.so objs/ngx_http_xslt_filter_module-debug.so \
-	&& mv objs/ngx_http_image_filter_module.so objs/ngx_http_image_filter_module-debug.so \
-	&& mv objs/ngx_http_geoip_module.so objs/ngx_http_geoip_module-debug.so \
-	&& mv objs/ngx_http_perl_module.so objs/ngx_http_perl_module-debug.so \
-	&& ./configure $CONFIG \
-	&& make -j$(getconf _NPROCESSORS_ONLN) \
-	&& make install \
-	&& rm -rf /etc/nginx/html/ \
-	&& mkdir /etc/nginx/conf.d/ \
-	&& mkdir -p /usr/share/nginx/html/ \
-	&& install -m644 html/index.html /usr/share/nginx/html/ \
-	&& install -m644 html/50x.html /usr/share/nginx/html/ \
-	&& install -m755 objs/nginx-debug /usr/sbin/nginx-debug \
-	&& install -m755 objs/ngx_http_xslt_filter_module-debug.so /usr/lib/nginx/modules/ngx_http_xslt_filter_module-debug.so \
-	&& install -m755 objs/ngx_http_image_filter_module-debug.so /usr/lib/nginx/modules/ngx_http_image_filter_module-debug.so \
-	&& install -m755 objs/ngx_http_geoip_module-debug.so /usr/lib/nginx/modules/ngx_http_geoip_module-debug.so \
-	&& install -m755 objs/ngx_http_perl_module-debug.so /usr/lib/nginx/modules/ngx_http_perl_module-debug.so \
-	&& ln -s ../../usr/lib/nginx/modules /etc/nginx/modules \
-	&& strip /usr/sbin/nginx* \
-	&& strip /usr/lib/nginx/modules/*.so \
-	&& rm -rf /usr/src/nginx-$NGINX_VERSION \
-	\
-	# Bring in gettext so we can get `envsubst`, then throw
-	# the rest away. To do this, we need to install `gettext`
-	# then move `envsubst` out of the way so `gettext` can
-	# be deleted completely, then move `envsubst` back.
-	&& apk add --no-cache --virtual .gettext gettext \
-	&& mv /usr/bin/envsubst /tmp/ \
-	\
-	&& runDeps="$( \
-		scanelf --needed --nobanner /usr/sbin/nginx /usr/lib/nginx/modules/*.so /tmp/envsubst \
-			| awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
-			| sort -u \
-			| xargs -r apk info --installed \
-			| sort -u \
-	)" \
-	&& apk add --no-cache --virtual .nginx-rundeps $runDeps \
-	&& apk del .build-deps \
-	&& apk del .gettext \
-	&& mv /tmp/envsubst /usr/local/bin/ \
-	\
-	# forward request and error logs to docker log collector
-	&& ln -sf /dev/stdout /var/log/nginx/access.log \
-	&& ln -sf /dev/stderr /var/log/nginx/error.log
+ENV MIRROR_URL_BACKUP http://alpine.gliderlabs.com/alpine/
 
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY nginx.vh.default.conf /etc/nginx/conf.d/default.conf
+ENV MIRROR_URL_SLOWEST http://dl-cdn.alpinelinux.org/alpine/
 
-EXPOSE 80 443
+#准备安装环境
+RUN echo '' > /etc/apk/repositories && \
+    echo "${MIRROR_URL}v3.3//main"     >> /etc/apk/repositories && \
+    echo "${MIRROR_URL}v3.3//community" >> /etc/apk/repositories && \
+    echo '185.31.17.249 github.com' >> /etc/hosts && \
+    echo '202.141.160.110 mirrors.ustc.edu.cn' >> /etc/hosts && \
+    echo '206.251.255.63 nginx.org' >> /etc/hosts
 
-CMD ["nginx", "-g", "daemon off;"]
+#安装必要的组件(如果发生  ERROR: Service 'nginx' failed to build: The command '/bin/sh -c apk add... returned a non-zero code: 12。  这是网络问题：请删干净未完成container和images，10分钟后再来一遍)
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    libc-dev \
+    make \
+    openssl-dev \
+    pcre-dev \
+    zlib-dev \
+    linux-headers \
+    curl \
+    jemalloc-dev \
+    gd-dev \
+    git
+#下载安装包和补丁
+RUN mkdir -p /var/run/nginx/
+RUN wget -c http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
+RUN git clone https://github.com/cuber/ngx_http_google_filter_module.git
+RUN git clone https://github.com/yaoweibin/ngx_http_substitutions_filter_module.git
+RUN git clone https://github.com/aperezdc/ngx-fancyindex.git
+RUN git clone https://github.com/yaoweibin/nginx_upstream_check_module.git
+
+#进行编译安装，同时打上补丁
+RUN tar -xzvf nginx-${NGINX_VERSION}.tar.gz && \
+cd nginx-${NGINX_VERSION} && \
+cd src/ && \
+#打补丁
+patch -p1 < /nginx_upstream_check_module/check_1.9.2+.patch && \
+cd .. && \
+#去除nginx的对外版本号
+sed -i -e 's/${NGINX_VERSION}//g' -e 's/nginx\//ERROR/g' -e 's/"NGINX"/"ERROR"/g' src/core/nginx.h  && \
+./configure --prefix=/usr/local/nginx \
+--with-pcre \
+--with-ipv6 \
+--with-http_ssl_module \
+--with-http_flv_module \
+--with-http_v2_module \
+--with-http_realip_module \
+--with-http_gzip_static_module \
+--with-http_stub_status_module \
+--with-http_mp4_module \
+--with-http_image_filter_module \
+--with-http_addition_module \
+--with-http_sub_module  \
+--with-http_dav_module  \
+--http-client-body-temp-path=/usr/local/nginx/client/ \
+--http-proxy-temp-path=/usr/local/nginx/proxy/ \
+--http-fastcgi-temp-path=/usr/local/nginx/fcgi/ \
+--http-uwsgi-temp-path=/usr/local/nginx/uwsgi \
+--http-scgi-temp-path=/usr/local/nginx/scgi \
+--add-module=../ngx_http_google_filter_module \
+--add-module=../ngx_http_substitutions_filter_module \
+--add-module=../ngx-fancyindex \
+--add-module=../nginx_upstream_check_module \
+--with-ld-opt="-ljemalloc" && \
+#开始编译
+make -j $(awk '/processor/{i++}END{print i}' /proc/cpuinfo) && make install && \
+
+#设置一些工作目录
+mkdir -p /usr/local/nginx/cache/ && \
+mkdir -p /usr/local/nginx/temp/ && \
+rm -rf ../{ngx*,nginx*}
+
+# Copy our nginx config
+RUN rm -Rf /usr/local/nginx/conf/nginx.conf
+ADD nginx.conf /usr/local/nginx/conf/nginx.conf
+
+VOLUME /usr/local/nginx/html/
+
+EXPOSE 443 80
+
+#启动nginx，保留一个前台进程，以免被docker强制退出
+CMD ./usr/local/nginx/sbin/nginx && tail -f /usr/local/nginx/logs/error.log
